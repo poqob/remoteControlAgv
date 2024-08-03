@@ -4,61 +4,46 @@
 #include "warning_circuit.hpp"  // data: {"u": "wn", "v": 1}
 #include "emergency_stop.hpp"   // data: {"u": "es", "v": 1}
 #include "motor0.hpp"
-#include "ln.hpp"
 #include "lineer0.hpp"
 #include "btstest.hpp"
+#include "RF.hpp"
 
-
+Rf rf;
 String _input;
 Packet packet;
-WarningC warning;
+// DistanceService distance;
 EmergencyStop emergencyStop;
 Lineer lineer;
-Test solteker;
-Test sagteker;
+BtsDriver solteker;
+BtsDriver sagteker;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(250000);  // Serial.begin(115200);
   // Define pins and initialize components
-  // warning = WarningC(10, 1000);
+  // distance = DistanceService();// trig echo
+  // distance.setup();
   emergencyStop = EmergencyStop();
-  lineer = Lineer(4, 5);
-  sagteker = Test(2, 3, 36, 37);
-  //solteker = Ln(10, 4, 5);
-  solteker = Test(4, 5, 40, 41);
+  lineer = Lineer(7, 6, 32, 33, 31);
+  sagteker = BtsDriver(3, 2, 36, 37,127);
+  solteker = BtsDriver(4, 5, 40, 41,127);
+  rf = Rf(127,75);
 }
 
-void gateway() {
-  if (packet.unit.equals("a0")) {
-    //solteker.run(packet.value);
-    solteker.run(packet.value);
-  } else if (packet.unit.equals("a1")) {
-    sagteker.run(packet.value);
-  } else if (packet.unit.equals("es")) {
-    if (packet.value == 0) {
-      emergencyStop.stop();
-    } else if (packet.value == 1) {
-      emergencyStop.start();
-    }
-  } else if (packet.unit.equals("wn")) {
-    // if (packet.value == 0) {
-    //   warning.stop();
-    // } else if (packet.value == 1) {
-    //   warning.blink();
-    // }
-  } else if (packet.unit.equals("ln")) {
-    lineer.run(packet.value);
-  } else {
-    // Handle unknown unit
-    //Serial.println("Unknown unit");
-  }
-}
+unsigned long previousMillis = 0;  // Kaydedilen son zamanı saklamak için değişken
+const unsigned long interval = 1000;  // Aralık süresi (1 saniye = 1000 milisaniye)
 
 void loop() {
-  if (Serial.available()) {
-    _input = Serial.readStringUntil('\n');
-    // Serial.println(_input);
-    packet.fromJson(_input);
-  }
-  gateway();
+  // Diğer işlemler
+  short* results = rf.RFloop(); 
+  short SAD = results[0];
+  short SOD = results[1];
+  short SOA = results[2];
+  short SAA = results[3];
+  
+  // İşlemler
+solteker.run(SOD);
+  sagteker.run(SAD);
+  lineer.run(SOA);
+
+ 
 }
